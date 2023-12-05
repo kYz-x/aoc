@@ -1,4 +1,6 @@
-f = open('./input.txt', 'r')
+import sys
+
+f = open(sys.argv[1], 'r')
 cal_val = []
 dig = {
     'one': 1,
@@ -11,6 +13,19 @@ dig = {
     'eight': 8,
     'nine': 9
 }
+
+def find_all_substring(string, substring):
+    idx = []
+    start = 0
+    pos = 0
+
+    while pos != -1:
+        pos = string.find(substring,start)
+        if pos != -1:
+            start = pos + 1
+            idx.append(pos)
+
+    return idx
 
 # For each line in file 
 for line in f:
@@ -28,11 +43,12 @@ for line in f:
 
     # Second Pass: recognize digit spelled with letters
     for d in dig.keys():
-        pos = line.find(d)
-        if pos != -1 and pos < first_pos:
-            first_dig, first_pos = str(dig[d]), pos
-        if pos != -1 and pos > last_pos:
-            last_dig, last_pos = str(dig[d]), pos
+        pos_list = find_all_substring(line,d)
+        for pos in pos_list:
+            if pos < first_pos:
+                first_dig, first_pos = str(dig[d]), pos
+            if pos > last_pos:
+                last_dig, last_pos = str(dig[d]), pos
     
     # If at least a digit as been parsed
     if first_pos < len(line):
