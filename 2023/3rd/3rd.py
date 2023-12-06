@@ -29,33 +29,41 @@ def get_value(string, pos):
     return int(''.join(val))
 
 f = open(sys.argv[1], 'r')
-matrix = []
 
 # Create a matrix of char with no carriage return
 matrix  = [line.rstrip() for line in f]
 parts = []
+gear_ratios = []
 
 # Parse the matrix for symbol
 for i in range(len(matrix)):
     for j in range(len(matrix[i])):
 
+        # If it is a symbol (not a digit or a point '.')
         if is_symbol(matrix[i][j]):
-            # print(f'{matrix[i][j]} {is_symbol(matrix[i][j])}')
             part_val = []
 
-            if j+1 < len(matrix[i]):
-                part_val.append(get_value(matrix[i],j+1))
-            if j-1 >= 0:
-                part_val.append(get_value(matrix[i],j-1))
-            if i+1 < len(matrix):
-                part_val.append(get_value(matrix[i+1],j))
-            if i-1 >= 0:
-                part_val.append(get_value(matrix[i-1],j))
+            # Find in all numbers adjacent to the symbole
+            for k in range(-1,2):
+                last_value = -1
+                for l in range(-1,2):
+                    if i+k < len(matrix) and i+k >= 0 and j+l < len(matrix[j+l]) and j+l >= 0:
+                        value = get_value(matrix[i+k],j+l)
 
-            parts += [val for val in part_val if val != -1]
+                        # Log the number if it is one and it is not the same number as in the previous position
+                        if value != -1 and last_value == -1:
+                            part_val.append(get_value(matrix[i+k],j+l))
 
-print(parts)
+                        last_value = value
+
+            # Finding Gear Ratios
+            if matrix[i][j] == '*' and len(part_val) == 2:
+                gear_ratios.append(part_val[0] * part_val[1])
+
+            parts += part_val
+
 
 # Printing Results
-print(f'Sum of all part values: {sum(parts)}')
+print(f'Sum of all part values (Part 1): {sum(parts)}')
+print(f'Sum of all gear ratios (Part 2): {sum(gear_ratios)}')
 
