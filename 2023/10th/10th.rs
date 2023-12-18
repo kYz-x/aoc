@@ -6,6 +6,8 @@ struct Grid {
     grid: Vec<Vec<char>>
 }
 
+#[derive(Clone)]
+#[derive(Debug)]
 struct Pos(usize,usize);
 
 #[derive(Debug)]
@@ -84,25 +86,27 @@ impl Grid {
     }
 
     /* Find path length starting from pos and coming from dir */
-    fn find_max_path(&mut self, path: Pos, dir: Dir) -> u32 { 
-        let mut stack: Vec<(Pos, Dir, u32)> = Vec::new();
-        let mut res1 : u32 = 0;
+    fn find_max_path(&mut self, path: Pos, dir: Dir) -> Vec<Pos> { 
+        let mut stack: Vec<(Pos, Dir, Vec<Pos>)> = Vec::new();
+        let mut max_path : Vec<Pos> = Vec::new();
+        let spath : Vec<Pos> = vec![path.clone()];
 
-        stack.push((path, dir, 0));
+        stack.push((path, dir, spath));
 
         while !stack.is_empty()
         {
             let call = stack.pop().unwrap();
             let Pos (x,y) = call.0; 
             let dir = call.1;
-            let val = call.2;
 
             /* Trying Right */
             if !matches!(dir, Dir::Right)  &&                     // if it doens't already come from the right
             x+1 < self.grid.len()          &&                     // if it doens't reach a boundary
             self.valid_path(Pos(x,y),Pos(x+1,y))                  // verify that the character (pipes) display a valid path
             {
-                stack.push((Pos(x+1,y), Dir::Left, val+1));   // if good, then find the rest of the path length
+                let mut spath = call.2.clone();
+                spath.push(Pos(x+1,y));
+                stack.push((Pos(x+1,y), Dir::Left, spath));   // if good, then find the rest of the path length
             }
 
             /* Trying Left */
@@ -110,7 +114,9 @@ impl Grid {
             x > 0                         && 
             self.valid_path(Pos(x,y),Pos(x-1,y)) 
             {
-                stack.push((Pos(x-1,y), Dir::Right, val+1));
+                let mut spath = call.2.clone();
+                spath.push(Pos(x-1,y));
+                stack.push((Pos(x-1,y), Dir::Right, spath));
             }
 
             /* Trying Down */
@@ -118,7 +124,9 @@ impl Grid {
             y+1 < self.grid[0].len()     && 
             self.valid_path(Pos(x,y),Pos(x,y+1)) 
             {
-                stack.push((Pos(x,y+1), Dir::Up, val+1));
+                let mut spath = call.2.clone();
+                spath.push(Pos(x,y+1));
+                stack.push((Pos(x,y+1), Dir::Up, spath));
             }
 
             /* Trying Up   */
@@ -126,16 +134,36 @@ impl Grid {
             y > 0                         && 
             self.valid_path(Pos(x,y),Pos(x,y-1)) 
             {
-                stack.push((Pos(x,y-1), Dir::Down, val+1));
+                let mut spath = call.2.clone();
+                spath.push(Pos(x,y-1));
+                stack.push((Pos(x,y-1), Dir::Down, spath));
             }
             
-            res1 = res1.max(val)
+            if call.2.len() > max_path.len() {max_path = call.2;}
         }
 
-        return res1;    // return the path with the maximum length (hoping that's the loop :p)
+        return max_path;    // return the path with the maximum length (hoping that's the loop :p)
     }
 
 }
+
+/* Shoelace Algortihm to calculate area inside the loop */
+fn shoelace_algorithm(loop_path : Vec<Pos>) -> i32 {
+    let mut area : i32 = 0;
+
+    for i in 0..loop_path.len() {
+        let Pos(xn,yn) = loop_path[i];
+        let Pos(xn_p1,yn_p1) = loop_path[(i+1) % loop_path.len()];
+        let xn_i = xn as i32;
+        let yn_i = yn as i32;
+        let xn_p1_i = xn_p1 as i32;
+        let yn_p1_i = yn_p1 as i32;
+        
+        area += xn_i * yn_p1_i - xn_p1_i * yn_i
+    }
+
+    return area.abs() / 2;
+}   
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -153,10 +181,16 @@ fn main() {
 
     /*** Part 1 Implementation ***/
     let mut grid = Grid::new(char_mat);
-    let s_pos = grid.get_s_pos().unwrap();
-    let s_len = grid.find_max_path(s_pos, Dir::Start);
-    let res1  = (s_len+1) / 2;
+    let s_pos    = grid.get_s_pos().unwrap();
+    let max_path = grid.find_max_path(s_pos, Dir::Start);
+    let res1     = (max_path.len()+1) / 2;
+
+    println!("Number of step to halfway of the loop starting from S (Part 1): {:?}", res1);
+
+    /*** Part 2 Implementation ***/
+    let mut res2 = shoelace_algorithm(max_path);
+    res2 = res2 - (res1 as i32) + 1;
 
     // Printing Results
-    println!("Number of step to halfway of the loop starting from S (Part 1): {:?}", res1);
+    println!("Area size inside the loop (Part 2): {:?}", res2);
 }
