@@ -3,30 +3,81 @@ import re
 
 workflow = {}
 inputs   = []
+encoding = {'x':0, 'm':1, 'a':2, 's':3}
+
 
 def exec_cond(cond, input):
     if cond['op'] == '<':
         return input[cond['var']] < cond['val']
     elif cond['op'] == '>':
         return input[cond['var']] > cond['val']
-    else: 
-        raise Exception('error')
 
-log = open('log.txt', 'w')
 def exec_work(work, input):
     state = None    
     for cond in work[0]:
-        log.write(str(cond) + '\n')
         if exec_cond(cond, input):
             state = cond['goto']
             break
     if not state:
         state = work[1]
-        log.write(state + '\n')
-    if not state:
-        raise Exception('error')
-    log.write(state + '\n')
     return state
+
+def explore_workflow(works, state, range):
+    next_range = range
+    a_ranges = []
+
+    # End condition for recursion   
+    if state == 'A':
+        return [range]
+    elif state == 'R':
+        return []
+
+    for cond in works[state][0]:
+        true_state, true_range, false_range = get_state_range(cond, next_range)
+        next_range = false_range
+        a_ranges += explore_workflow(works, true_state, true_range)
+    
+    false_state = works[state][1]
+    a_ranges += explore_workflow(works, false_state, false_range)
+
+    return a_ranges
+    
+def get_state_range(cond, next_range):
+    true_state = cond['goto']
+    true_range = next_range[:]
+    false_range = next_range[:]
+    r_t = [true_range[encoding[cond['var']]][0], true_range[encoding[cond['var']]][1]]
+    r_f = r_t[:]
+
+    if cond['op'] == '<':
+        # True Range
+        if (cond['val'] - 1) < r_t[1]: 
+            r_t[1] = cond['val'] - 1
+        # False Range
+        if cond['val'] > r_f[0]:
+            r_f[0] = cond['val']
+    elif cond['op'] == '>':
+        # True Range
+        if cond['val'] < r_f[1]: 
+            r_f[1] = cond['val']
+        # False Range
+        if (cond['val'] + 1) > r_t[0]:
+            r_t[0] = cond['val'] + 1
+    
+    true_range[encoding[cond['var']]]  = (r_t[0], r_t[1])
+    false_range[encoding[cond['var']]] = (r_f[0], r_f[1])
+
+    return true_state, true_range, false_range
+
+def compute_comb(ranges):
+    comb = 0
+    for r in ranges:
+        comb_varr = 1
+        for varr in r:
+            if (varr[1] - varr[0] + 1) > 0:
+                comb_varr *= varr[1] - varr[0] + 1
+        comb += comb_varr
+    return comb
 
 # File Parsing
 f = open(sys.argv[1], 'r')
@@ -65,6 +116,9 @@ for input in inputs:
         res1.append(sum(input.values()))
 
 # Part 2 Implementation
+ranges = explore_workflow(workflow, 'in', [(1,4000),(1,4000),(1,4000),(1,4000)])
+res2   = compute_comb(ranges)
 
 # Printing Results
 print(f'Result from all accepted parts (Part 1): {sum(res1)}')
+print(f'Number of accepted combinaison (Part 2): {res2}')
